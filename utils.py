@@ -231,7 +231,7 @@ def visualize_image_data(X, y = None,
 def prediction_result(ds, pred_probs, filenames):
     '''
     FUNCTIONALITIES: creat a pandas DataFrame to describe prediction result
-    ARGUMENTS:
+    ARGUMENTS:		
     - ds: tf dataset without shuffle
     - pred_probs: prediction probabilities -> 2D numpy array
     - filenames: list of file names -> list

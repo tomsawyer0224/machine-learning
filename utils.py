@@ -229,8 +229,127 @@ def visualize_image_data(X, y = None,
     plt.show()
 	
 	
+def prediction_result(ds, pred_probs, filenames):
+    '''
+    FUNCTIONALITIES: creat a pandas DataFrame to describe prediction result
+    ARGUMENTS:		
+    - ds: tf dataset without shuffle
+    - pred_probs: prediction probabilities -> 2D numpy array
+    - filenames: list of file names -> list
+        Note: file name must correspond to (image, label) in ds
+    RETURN: pandas DataFrame
+    USAGE:
+    pred_result = prediction_result(ds = test_dataset, pred_probs = pred_probs, filenames = filenames)
+    '''
+    class_names = ds.class_names
+    true_labels = np.array( # create numpy array from list of images (numpy array)
+        list(
+            ds.unbatch().map(lambda img, lbl: lbl).as_numpy_iterator()
+        )
+    )
+	# if true_labels is 2D one hot encoding array -> use argmax to get true_labels in 1D array
+    if true_labels.ndim == 2:
+        true_labels = np.argmax(true_labels, axis = 1)
+	pred_labels = np.argmax(pred_probs, axis = 1) # predicted labels
+    prob_labels = np.max(pred_probs, axis = 1) # probability of predictions
+    correct = true_labels == pred_labels # right prediction -> True, wrong prediction -> False
+    true_class_names = [class_names[true_labels[i]] for i in range(len(true_labels))] # true class names
+    pred_class_names = [class_names[pred_labels[i]] for i in range(len(pred_labels))] # predicted class names
+    # create pandas DataFrame
+    pred_result = pd.DataFrame({
+        'file_name': filenames,
+        'true_label': true_labels,
+        'true_class_name': true_class_names,
+        'pred_label': pred_labels,
+        'pred_class_names': pred_class_names,
+        'pred_probability': prob_labels,
+        'correct': correct
+    })
+    return pred_result
+		
+def top_wrong_prediction(X, y = None, 
+						 pred_probs = None, 
+						 class_names = None, 
+						 k = 10, 
+						 figsize = (10,12), 
+						 cmap = None):
+    '''
+	FUNCTIONALITIES: visualize top wrong prediction (with high probability)
+	ARGUMENTS:
+    - X: testing images data-> numpy array or tf dataset
+    - y: labels -> numpy array or None (if X is tf dataset)
+    - pred_probs: prediction probabilities -> 2D numpy array
+    - class_names: name of classes -> list of string
+    - k: top k wrong predictions -> int
+    - figsize: figure size -> tuple of int
+    - cmap: color map -> plt.cm.binary or None or 'grey'
+	RETURN: NONE
+	USAGE:
+	top_wrong_prediction(test_dataset, pred_probs = pred_probs, k = 25)
+    '''
+    if pred_probs is None:
+        print('please provide "pred_probs"!')
+        return
+    # predicted label
+    pred_labels = np.argmax(pred_probs, axis = 1)
+    # probability of prediction
+    prob_labels = np.max(pred_probs, axis = 1)
+    # PRODUCE images, true_labels, class_names FROM X, y, class_names
+	if isinstance(X, np.ndarray):
+        images = X
+        true_labels = y
+    else:
+        if class_names is None:
+            class_names = X.class_names
+        images = []
+        true_labels = []
+        for img, lbl in X.unbatch():
+            images.append(img)
+            true_labels.append(lbl)
+        images = np.asarray(images)
+        true_labels = np.asarray(true_labels)
 	
-	
-	
-	
+	# we must provid true_labels
+    if true_labels is None:
+        print('please provide labels!')
+        return
+	# if true_labels is 2D -> use argmax to transform it into 1D array
+	# if we don't provide class_names -> use class id
+    if true_labels.ndim == 2:
+        if class_names is None:
+            class_names = list(range(true_labels.shape[1]))
+        true_labels = np.argmax(true_labels, axis = 1)
+    else:
+        if class_names is None:
+            class_names = list(
+                range(len(np.unique(true_labels)))
+            )
+    # get indices of wrong predictions from whole
+    wrong_labels = true_labels != pred_labels # if true_labels == pred_labels -> False
+    wrong_pred_images = images[wrong_labels] # wrong prediction images
+    wrong_true_labels = true_labels[wrong_labels]# true label of wrong prediction images
+    wrong_pred_labels = pred_labels[wrong_labels]# predicted label of wrong prediction images
+    wrong_prob_labels = 100*prob_labels[wrong_labels]# max prediction probability of wrong prediction images
+    # find the indices of top k wrong prediction
+    topk_wrong_indices = np.flip(
+        np.argsort(wrong_prob_labels)# sort indices in increasing form, then reverse by flip method
+    )[:min(len(wrong_prob_labels), k)]# get top k indices 
+    #print(topk_wrong_indices)
+    n = len(topk_wrong_indices)
+    r = math.ceil(math.sqrt(n))
+    plt.figure(figsize = figsize)
+    if cmap == 'grey':
+        cmap = plt.cm.binary
+    for i in range(n):
+        idx = topk_wrong_indices[i]
+        plt.subplot(r,r,i+1)
+        plt.imshow(wrong_pred_images[idx].astype('uint8'), cmap = cmap)
+        plt.title(f'label: {class_names[wrong_true_labels[idx]]}')
+        plt.xticks([])
+        plt.yticks([])
+        plt.xlabel(
+            f'prediction: {class_names[wrong_pred_labels[idx]]}' +
+            ' ({:2.2f}%)'.format(wrong_prob_labels[idx])
+        )
+    plt.show()
 	

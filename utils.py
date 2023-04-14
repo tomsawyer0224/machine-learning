@@ -352,4 +352,3 @@ def top_wrong_prediction(X, y = None,
             ' ({:2.2f}%)'.format(wrong_prob_labels[idx])
         )
     plt.show()
-	

@@ -332,7 +332,7 @@ def top_wrong_prediction(X, y = None,
     # find the indices of top k wrong prediction
     topk_wrong_indices = np.flip(
         np.argsort(wrong_prob_labels)# sort indices in increasing form, then reverse by flip method
-    )[:min(len(wrong_prob_labels), k)]# get top k indices 
+    )[:min(len(wrong_prob_labels), k)]# get top k indices
     #print(topk_wrong_indices)
     n = len(topk_wrong_indices)
     r = math.ceil(math.sqrt(n))

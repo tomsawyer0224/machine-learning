@@ -7,6 +7,27 @@ import math
 import string
 import re
 
+def load_image(filename, image_size = (224,224)):
+	'''
+	FUNCIONALITIES: read a image, resize it to specific size, and return a tf tensor
+	ARGUMENTS:
+	- filename: full file path or url -> string
+	- image_size: desired size of image (height, width) -> tuple of int
+	RETURN:
+	- a tf tensor of shape (height, width, channels) like (224,224,3)
+	USAGE:
+	img = load_image(
+		'/home/project/classification/pet/cat/1.jpg', # file name
+		image_size = (180,180) # size that you want to resize to
+	)
+	'''
+	# read a file from full file path or url
+    img = tf.io.read_file(filename)
+	# decode the image into a tensor
+    img = tf.image.decode_jpeg(img)
+	# resize it to image_size
+    img = tf.image.resize(img, image_size)
+    return img
 
 def pred_and_plot(img, model, class_names):
     '''

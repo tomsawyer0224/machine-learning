@@ -343,7 +343,7 @@ def top_wrong_prediction(X, y = None,
         idx = topk_wrong_indices[i]
         plt.subplot(r,r,i+1)
         plt.imshow(wrong_pred_images[idx].astype('uint8'), cmap = cmap)
-        plt.title(f'label: {class_names[wrong_true_labels[idx]]}')
+        plt.title(f'label: {class_names[wrong_true_labels[idx]]}') 
         plt.xticks([])
         plt.yticks([])
         plt.xlabel(

@@ -324,7 +324,7 @@ def top_wrong_prediction(X, y = None,
             class_names = list(
                 range(len(np.unique(true_labels)))
             )
-    # get indices of wrong predictions from whole
+    # get indices of wrong predictions
     wrong_labels = true_labels != pred_labels # if true_labels == pred_labels -> False
     wrong_pred_images = images[wrong_labels] # wrong prediction images
     wrong_true_labels = true_labels[wrong_labels]# true label of wrong prediction images

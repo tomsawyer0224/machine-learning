@@ -31,50 +31,50 @@ def load_image(filename, image_size = (224,224)):
 
 def pred_and_plot(img, model, class_names):
     '''
-	FUNCTIONALITIES: predict and plot a image
-	ARGUMENTS:
+    FUNCTIONALITIES: predict and plot a image
+    ARGUMENTS:
     - img: array-like of shape (height, width, 3) -> numpy array or tf tensor
     - model: keras trained model
     - class_names: name of classes -> list of string
-	RETURN: NONE
-	USAGE:
-	pred_and_plot(img, catdog_model, ['cat', 'dog'])
+    RETURN: NONE
+    USAGE:
+    pred_and_plot(img, catdog_model, ['cat', 'dog'])
     '''
-	# expand dimension to (batch, height, width, 3)
+    # expand dimension to (batch, height, width, 3)
     img = tf.expand_dims(img, axis = 0)
-	# predict
+    # predict
     pred = model.predict(img)
-	# get the label from 2D one hot encoding array
+    # get the label from 2D one hot encoding array
     pred_label = np.argmax(pred, axis = 1)[0]
-	# plot the image
+    # plot the image
     plt.imshow(img[0].numpy().astype('uint8'))
     plt.title(f'predict: {class_names[pred_label]}')
     plt.axis('off')
     plt.show()
-	
-	
+    
+    
 def class_distribution(y):
     '''
-	FUNCTIONALITIES: plot class distribution
-	ARGUMENTS:
+    FUNCTIONALITIES: plot class distribution
+    ARGUMENTS:
     - y: labels -> numpy array or tf dataset
-	RETURN: NONE
-	USAGE:
-	class_distribution(y_train)
-	class_distribution(train_dataset)
+    RETURN: NONE
+    USAGE:
+    class_distribution(y_train)
+    class_distribution(train_dataset)
     '''
     # if y is numpy array
     if isinstance(y, np.ndarray):
         labels = y
     # if y is tf dataset
     else:
-		# create a numpy array from a list of labels (numpy arrays)
+        # create a numpy array from a list of labels (numpy arrays)
         labels = np.array(
             list(
                 y.unbatch().map(lambda img, lbl: lbl).as_numpy_iterator() # return a list of labels (numpy form)
             )
         )
-	# if labels is in 2D one hot encoding form -> use argmax to get labels in 1D form (like [0,3,2,1,2,3])
+    # if labels is in 2D one hot encoding form -> use argmax to get labels in 1D form (like [0,3,2,1,2,3])
     if labels.ndim == 2:
         n_classes = labels.shape[1] # number of class n_classes = number of features
         labels = np.argmax(labels, axis = 1)
@@ -82,7 +82,7 @@ def class_distribution(y):
         n_classes = len(
             np.unique(labels) # number of class n_classes = number of unique values in labels, e.g [1,1,0,2] -> n_classes = 3
         )
-	# plot histogram of the labels
+    # plot histogram of the labels
     plt.hist(labels, bins = n_classes, rwidth = 0.8)
     plt.show()
 
@@ -96,8 +96,8 @@ def visualize_image_data(X, y = None,
                           num_images = 25,
                           cmap = None):
     '''
-	FUNCTIONALITIES: visualize image data from numpy array or tf dataset
-	ARGUMENTS:
+    FUNCTIONALITIES: visualize image data from numpy array or tf dataset
+    ARGUMENTS:
     - X: images data -> numpy array or tf dataset
     - y: labels -> nump array or None (if X is a tf dataset)
     - class_names: name of classes -> list of string (e.g [0,1,2] or ['cat', 'dog', 'monkey']) or None
@@ -107,15 +107,15 @@ def visualize_image_data(X, y = None,
     - figsize: figure size -> tuple of int
     - num_images: number of images in figure -> int
     - cmap: color map -> plt.cm.binary (to visualize grey image) or None (color image) or 'grey'
-	RETURNS: NONE
-	USAGE:
-	- visualize training data
-	visualize(train_dataset)
-	visualize(x_train, y_train, class_names = ['cat', 'dog', 'monkey'])
-	- visualize testing data
-	visualize(test_dataset, pred_probs = pred_probs)
+    RETURNS: NONE
+    USAGE:
+    - visualize training data
+    visualize(train_dataset)
+    visualize(x_train, y_train, class_names = ['cat', 'dog', 'monkey'])
+    - visualize testing data
+    visualize(test_dataset, pred_probs = pred_probs)
     '''
-	# PRODUCE images, true_labels, class_names FROM X, y, class_names
+    # PRODUCE images, true_labels, class_names FROM X, y, class_names
     # if X is numpy array -> assign simply
     if isinstance(X, np.ndarray):
         images = X
@@ -125,7 +125,7 @@ def visualize_image_data(X, y = None,
         # if we want to visualize prediction (on testing set), we will take all images
         # otherwise, we will take 1 batch for simplicity
         if class_names is None: # if we don't provide class_names -> we will get it from tf dataset
-			class_names = X.class_names # maybe raise an error (if inputs are not numpy array or tf dataset or tf dataset doesn't have labels)
+            class_names = X.class_names # maybe raise an error (if inputs are not numpy array or tf dataset or tf dataset doesn't have labels)
         if label_key is None and pred_probs is None: # if we don't provide label_key, pred_probs together -> visualize training data
             ds = X.take(1).unbatch() # take 1 batch
         else:# otherwise -> visualize prediction (on testing data)
@@ -173,7 +173,7 @@ def visualize_image_data(X, y = None,
             return
         label_key = class_names.index(label_key)
     # PRODUCE pred_labels, prob_labels FROM pred_probs
-	if pred_probs is not None:
+    if pred_probs is not None:
         # predicted label
         pred_labels = np.argmax(pred_probs, axis = 1)
         # probability of label prediction
@@ -189,7 +189,7 @@ def visualize_image_data(X, y = None,
     shuffled_indices = np.random.permutation(n_samples)
     idx0 = shuffled_indices[0] # use only 1 image in case of visualizing augmentation data
     # visualize testing data
-	if label_key is not None:
+    if label_key is not None:
         j = 0 # images counter
         for i in range(n_samples):
             idx = shuffled_indices[i] # index that shuffled
@@ -209,7 +209,7 @@ def visualize_image_data(X, y = None,
         plt.show()
         return 
     # visualize training data
-	for i in range(min(num_images,n_samples)):
+    for i in range(min(num_images,n_samples)):
         plt.subplot(r,r,i+1)
         idx = shuffled_indices[i]
         plt.xticks([])
@@ -226,12 +226,12 @@ def visualize_image_data(X, y = None,
             plt.imshow(aug(images[idx0]).numpy().astype('uint8'), cmap = cmap)
             plt.title(f'label: {class_names[true_labels[idx0]]}')
     plt.show()
-	
-	
+    
+    
 def prediction_result(ds, pred_probs, filenames):
     '''
     FUNCTIONALITIES: creat a pandas DataFrame to describe prediction result
-    ARGUMENTS:		
+    ARGUMENTS:      
     - ds: tf dataset without shuffle
     - pred_probs: prediction probabilities -> 2D numpy array
     - filenames: list of file names -> list
@@ -246,10 +246,10 @@ def prediction_result(ds, pred_probs, filenames):
             ds.unbatch().map(lambda img, lbl: lbl).as_numpy_iterator()
         )
     )
-	# if true_labels is 2D one hot encoding array -> use argmax to get true_labels in 1D array
+    # if true_labels is 2D one hot encoding array -> use argmax to get true_labels in 1D array
     if true_labels.ndim == 2:
         true_labels = np.argmax(true_labels, axis = 1)
-	pred_labels = np.argmax(pred_probs, axis = 1) # predicted labels
+    pred_labels = np.argmax(pred_probs, axis = 1) # predicted labels
     prob_labels = np.max(pred_probs, axis = 1) # probability of predictions
     correct = true_labels == pred_labels # right prediction -> True, wrong prediction -> False
     true_class_names = [class_names[true_labels[i]] for i in range(len(true_labels))] # true class names
@@ -265,16 +265,16 @@ def prediction_result(ds, pred_probs, filenames):
         'correct': correct
     })
     return pred_result
-		
+        
 def top_wrong_prediction(X, y = None, 
-						 pred_probs = None, 
-						 class_names = None, 
-						 k = 10, 
-						 figsize = (10,12), 
-						 cmap = None):
+                         pred_probs = None, 
+                         class_names = None, 
+                         k = 10, 
+                         figsize = (10,12), 
+                         cmap = None):
     '''
-	FUNCTIONALITIES: visualize top wrong prediction (with high probability)
-	ARGUMENTS:
+    FUNCTIONALITIES: visualize top wrong prediction (with high probability)
+    ARGUMENTS:
     - X: testing images data-> numpy array or tf dataset
     - y: labels -> numpy array or None (if X is tf dataset)
     - pred_probs: prediction probabilities -> 2D numpy array
@@ -282,9 +282,9 @@ def top_wrong_prediction(X, y = None,
     - k: top k wrong predictions -> int
     - figsize: figure size -> tuple of int
     - cmap: color map -> plt.cm.binary or None or 'grey'
-	RETURN: NONE
-	USAGE:
-	top_wrong_prediction(test_dataset, pred_probs = pred_probs, k = 25)
+    RETURN: NONE
+    USAGE:
+    top_wrong_prediction(test_dataset, pred_probs = pred_probs, k = 25)
     '''
     if pred_probs is None:
         print('please provide "pred_probs"!')
@@ -294,7 +294,7 @@ def top_wrong_prediction(X, y = None,
     # probability of prediction
     prob_labels = np.max(pred_probs, axis = 1)
     # PRODUCE images, true_labels, class_names FROM X, y, class_names
-	if isinstance(X, np.ndarray):
+    if isinstance(X, np.ndarray):
         images = X
         true_labels = y
     else:
@@ -307,13 +307,13 @@ def top_wrong_prediction(X, y = None,
             true_labels.append(lbl)
         images = np.asarray(images)
         true_labels = np.asarray(true_labels)
-	
-	# we must provid true_labels
+    
+    # we must provid true_labels
     if true_labels is None:
         print('please provide labels!')
         return
-	# if true_labels is 2D -> use argmax to transform it into 1D array
-	# if we don't provide class_names -> use class id
+    # if true_labels is 2D -> use argmax to transform it into 1D array
+    # if we don't provide class_names -> use class id
     if true_labels.ndim == 2:
         if class_names is None:
             class_names = list(range(true_labels.shape[1]))

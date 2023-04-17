@@ -190,13 +190,13 @@ def visualize_image_data(X, y = None,
     # PRODUCE pred_labels, prob_labels FROM pred_probs
     if pred_probs is not None:
         if pred_probs.shape[1] == 1: # shape (None, 1) -> binary classification
-            pred_probs_flattended = pred_probs.flatten()
-            pred_labels = np.where(pred_probs_flattended > 0.5, 1, 0)
-            prob_labels = 100*np.where(pred_probs_flattended > 0.5, pred_probs_flattended, 1 - pred_probs_flattended)
+            pred_probs_flattenned = pred_probs.flatten()
+            pred_labels = np.where(pred_probs_flattenned > 0.5, 1, 0)
+            prob_labels = np.where(pred_probs_flattenned > 0.5, 100*pred_probs_flattenned, 100 - 100*pred_probs_flattenned)
         else:
             # predicted label
             pred_labels = np.argmax(pred_probs, axis = 1)
-            # probability of label prediction
+            # probability of predicted label
             prob_labels = np.max(pred_probs, axis = 1)*100
 
     # VISUALIZE

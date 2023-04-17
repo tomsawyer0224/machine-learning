@@ -192,7 +192,7 @@ def visualize_image_data(X, y = None,
         if pred_probs.shape[1] == 1: # shape (None, 1) -> binary classification
             pred_probs_flattenned = pred_probs.flatten()
             pred_labels = np.where(pred_probs_flattenned > 0.5, 1, 0)
-            prob_labels = np.where(pred_probs_flattenned > 0.5, 100*pred_probs_flattenned, 100 - 100*pred_probs_flattenned)
+            prob_labels = 100*np.where(pred_probs_flattenned > 0.5, pred_probs_flattenned, 1 - pred_probs_flattenned)
         else:
             # predicted label
             pred_labels = np.argmax(pred_probs, axis = 1)

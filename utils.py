@@ -7,6 +7,7 @@ import math
 import string
 import re
 
+# IMAGE CLASSIFICATION UTILITIES
 def load_image(filename, image_size = (224,224)):
     '''
     FUNCIONALITIES: read a image, resize it to specific size, and return a tf tensor
@@ -17,8 +18,12 @@ def load_image(filename, image_size = (224,224)):
     - a tf tensor of shape (height, width, channels) like (224,224,3)
     USAGE:
     img = load_image(
-        '/home/project/classification/pet/cat/1.jpg', # file name
-        image_size = (180,180) # size that you want to resize to
+        filename = '/home/project/classification/pets/cat/1.jpg', # file name
+        image_size = desired_image_size # size that you want to resize to
+    )
+    img = load_image(
+        filename = 'https://storage/car.jpg',
+        image_size = desired_image_size
     )
     '''
     # read a file from full file path or url
@@ -119,11 +124,11 @@ def visualize_image_data(X, y = None,
     - cmap: color map -> plt.cm.binary (to visualize grey image) or None (color image) or 'grey'
     RETURNS: NONE
     USAGE:
-    - visualize training data
+    - visualize on training data
     visualize(train_dataset)
-    visualize(x_train, y_train, class_names = ['cat', 'dog', 'monkey'])
-    - visualize testing data
-    visualize(test_dataset, pred_probs = pred_probs)
+    visualize(x_train, y_train, class_names = ['cat', 'dog', 'monkey']) # label_key = 'cat' for specific class visualization
+    - visualize on testing data
+    visualize(test_dataset, pred_probs = pred_probs) # label_key = 'cat' for specific class visualization
     '''
     # PRODUCE images, true_labels, class_names FROM X, y, class_names
     # if X is numpy array -> assign simply

@@ -59,13 +59,15 @@ def predict_and_plot(image, image_size, model, class_names, cmap = None):
     img = tf.expand_dims(image, axis = 0)# expand to 4D array
     pred = model.predict(img)# predict
     if pred.shape[1] == 1: # shape of pred is (None, 1) -> binary classification
-        pred_label = 1 if (pred[0][0] > 0.5) else 0
+        pred_label = 1 if pred[0][0] > 0.5 else 0 # get label
+        prob_label = pred[0][0] if pred[0][0] > 0.5 else 1 - pred[0][0] # get probability of predicted label
     else:# categorical classification
-        pred_label = np.argmax(pred, axis = 1)[0]# get label
+        pred_label = np.argmax(pred, axis = 1)[0] # get label
+        prob_label = np.max(pred, axis = 1)[0] # get probability of predicted label
     if cmap == 'grey':
         cmap = plt.cm.binary
     plt.imshow(img[0].numpy().astype('uint8'), cmap = cmap)# show image
-    plt.xlabel(f'predict: {class_names[pred_label]}')
+    plt.xlabel(f'predict: {class_names[pred_label]}' + ' ({:2.2f}%)'.format(100*prob_label))
     plt.xticks([])
     plt.yticks([])
     plt.show()

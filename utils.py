@@ -34,7 +34,7 @@ def load_image(filename, image_size = (224,224)):
     img = tf.image.resize(img, image_size)
     return img
 
-def predict_and_plot(image, image_size, model, class_names):
+def predict_and_plot(image, image_size, model, class_names, cmap = None):
     '''
     FUNCTIONALITIES: 
     - predict an image
@@ -44,6 +44,7 @@ def predict_and_plot(image, image_size, model, class_names):
     - image_size: image will be resized to image_size (without channels)
     - model: keras classification model
     - class_names: name of classes -> list
+    - cmap: color map -> plt.cm.binary or 'grey' or None
     RETURN: None
     USAGE:
     predict_and_plot(image=3D_array, model=cat_dog_model, class_names=['cat', 'dog'])
@@ -61,7 +62,9 @@ def predict_and_plot(image, image_size, model, class_names):
         pred_label = 1 if (pred[0][0] > 0.5) else 0
     else:# categorical classification
         pred_label = np.argmax(pred, axis = 1)[0]# get label
-    plt.imshow(img[0].numpy().astype('uint8'))# show image
+    if cmap = 'grey':
+        cmap = plt.cm.binary
+    plt.imshow(img[0].numpy().astype('uint8'), cmap = cmap)# show image
     plt.xlabel(f'predict: {class_names[pred_label]}')
     plt.xticks([])
     plt.yticks([])

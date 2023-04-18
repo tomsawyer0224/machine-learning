@@ -62,7 +62,7 @@ def predict_and_plot(image, image_size, model, class_names, cmap = None):
         pred_label = 1 if (pred[0][0] > 0.5) else 0
     else:# categorical classification
         pred_label = np.argmax(pred, axis = 1)[0]# get label
-    if cmap = 'grey':
+    if cmap == 'grey':
         cmap = plt.cm.binary
     plt.imshow(img[0].numpy().astype('uint8'), cmap = cmap)# show image
     plt.xlabel(f'predict: {class_names[pred_label]}')

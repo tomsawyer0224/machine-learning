@@ -107,7 +107,7 @@ def visualize_image_data(X, y = None,
                           aug = None,
                           label_key = None,
                           pred_probs = None,
-                          figsize = (10,12),
+                          figsize = (15,18),
                           num_images = 25,
                           cmap = None):
     '''

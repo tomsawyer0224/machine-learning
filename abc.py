@@ -6,16 +6,30 @@ import math
 import string
 import re
 
-def f1_score(y_true,pred_probs,class_names=None,figsize=(10,25)):
-    if isinstance(y_true, np.ndarray):
+def f1_score(y_true, pred_probs, class_names=None, figsize=(10,25)):
+    '''
+    FUNCTIONALITIES: create a pandas DataFrame f1-score, and plot it
+    ARGUMENTS:
+    - y_true: true labels -> numpy array (1D, 2D) or tf dataset (test dataset, must include labels)
+    - pred_probs: prediction probabilities -> 2D numpy array
+    - class_names: name of classes -> list
+    - figsize: figure size -> tuple of int
+    RETURN: None
+    USAGE:
+    f1 = f1_score(y_true = y_test, pred_probs = test_pred_probs, class_names = ['cat', 'dog'], figsize = (4,6))
+    f1 = f1_score(y_true = test_ds, pred_probs = test_pred_probs, class_names = test_ds.class_names, figsize = (6,15))
+    '''
+    # PRODUCE true_labels, class_names FROM y_true, class_names
+    if isinstance(y_true, np.ndarray):# numpy array
         true_labels = y_true
-    else:
+    else:# tf dataset
         class_names = y_true.class_names
         true_labels = np.array(
             list(
                 y_true.unbatch().map(lambda img, lbl: lbl).as_numpy_iterator()
             )
         )
+    # if true_labels is 2D -> convert to 1D, else do nothing
     if true_labels.ndim == 2:
         if true_labels.shape[1] == 1: # (None, 1) -> binary classification
             if class_names is None:
@@ -34,11 +48,15 @@ def f1_score(y_true,pred_probs,class_names=None,figsize=(10,25)):
             class_names = list(
                 range(len(np.unique(true_labels)))
             )
+
+    # PRODUCE pred_labels, prob_labels FROM pred_probs
     if pred_probs.shape[1] == 1: # (None, 1) -> binary classification
         pred_labels_flattenned = pred_probs.flatten()
         pred_labels = np.where(pred_labels_flattenned > 0.5, 1, 0)
     else:
         pred_labels = np.argmax(pred_probs, axis = 1)
+
+    # create classification report on testing data    
     cls_rep = classification_report(
         true_labels,           
         pred_labels,
@@ -46,6 +64,7 @@ def f1_score(y_true,pred_probs,class_names=None,figsize=(10,25)):
         output_dict = True
     )
     f1_score_dict = {}
+    # get f1-score only
     for cl_i, score_i in cls_rep.items():
         if cl_i == 'accuracy': break
         f1_score_dict[cl_i] = score_i['f1-score']
@@ -53,32 +72,45 @@ def f1_score(y_true,pred_probs,class_names=None,figsize=(10,25)):
         'class_names': list(f1_score_dict.keys()),
         'f1-score': list(f1_score_dict.values())
     })
+    # sort DataFrame by 'f1-score'
     f1_score.sort_values(by='f1-score', ascending = False, inplace = True)
-    
+    # plotting
     fig, ax = plt.subplots(figsize = figsize)
-    score = ax.barh(y = range(len(f1_score)), width = f1_score['f1-score'])
+    score = ax.barh(y = range(len(f1_score)), width = f1_score['f1-score']) # horizontal bar
     ax.set(
         yticks = range(len(f1_score)),
         yticklabels = list(f1_score['class_names']),
         xticks = [0,0.2,0.4,0.6,0.8,1.0,1.2],
         title = 'f1-scores'
     )
-    ax.invert_yaxis()
+    ax.invert_yaxis() # invert to sort decreasing
+    # labels the bars
     for rect in score:
         width = rect.get_width()
         ax.text(
             1.05*width,# position
-            rect.get_y() + rect.get_height()/1.5,#position
+            rect.get_y() + rect.get_height()/1.5,# position
             f"{width:.2f}",#string
-            ha='center', va='bottom' #horizontalalignment, verticalalignment
+            ha='center', va='bottom' # horizontalalignment, verticalalignment
         )
+
         
-    def plot_confusion_matrix(y_true,
+def plot_confusion_matrix(y_true,
                           pred_probs,
                           class_names = None,
                           norm=False,
                           figsize=(15,15),
                           text_size = 15):
+    '''
+    FUNCTIONALITIES: create confusion matrix and plot it
+    ARGUMENTS:
+    - y_true: true labels -> numpy array (1D, 2D) or tf dataset (test dataset, must include labels)
+    - pred_probs: prediction probabilities -> 2D numpy array
+    - class_names: name of classes -> list
+    - norm: normalize (True) or not (False) -> boolean
+    - figsize: figure size -> tuple of int
+    - text_size: size of text when displaying
+    '''
     if isinstance(y_true, np.ndarray):
         true_labels = y_true
     else:
@@ -111,8 +143,9 @@ def f1_score(y_true,pred_probs,class_names=None,figsize=(10,25)):
         pred_labels = np.where(pred_labels_flattenned > 0.5, 1, 0)
     else:
         pred_labels = np.argmax(pred_probs, axis = 1)
+    # confusion matrix (x axis : predicted labels, y axis: true labels)
     cm = confusion_matrix(true_labels, pred_labels)
-    cm_norm = cm.astype("float")/cm.sum(axis=1)[:, np.newaxis] # normalize it
+    cm_norm = cm.astype("float")/cm.sum(axis=1)[:, np.newaxis] # normalize it (by row)
     fig, ax = plt.subplots(figsize = figsize)
     cax = ax.matshow(cm, cmap = plt.cm.Blues)
     fig.colorbar(cax)

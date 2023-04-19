@@ -552,4 +552,5 @@ def plot_confusion_matrix(y_true,
                   horizontalalignment="center",
                   color="white" if cm[i, j] > threshold else "black",
                   size=text_size)
-            
+# END OF IMAGE CLASSIFICATION UTILITIES
+####################################################

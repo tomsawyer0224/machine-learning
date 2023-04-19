@@ -383,7 +383,7 @@ def prediction_result(X, y = None,
         return wrong_pred_result
     return all_pred_result
 
-def f1_score(y_true, pred_probs, class_names=None, figsize=(10,25)):
+def f1_score(y_true, pred_probs, class_names=None, figsize=(8,15)):
     '''
     FUNCTIONALITIES: create a pandas DataFrame f1-score, and plot it
     ARGUMENTS:
@@ -477,7 +477,7 @@ def plot_confusion_matrix(y_true,
                           class_names = None,
                           norm=False,
                           figsize=(15,15),
-                          text_size = 15):
+                          text_size = 10):
     '''
     FUNCTIONALITIES: create confusion matrix and plot it
     ARGUMENTS:

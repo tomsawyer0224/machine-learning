@@ -100,7 +100,10 @@ def class_distribution(y):
     # if labels is in 2D one hot encoding form -> use argmax to get labels in 1D form (like [0,3,2,1,2,3])
     if labels.ndim == 2:
         n_classes = labels.shape[1] # number of class n_classes = number of features
-        labels = np.argmax(labels, axis = 1)
+        if n_classes == 1:
+            labels = labels.flatten().astype('int32')
+        else:
+            labels = np.argmax(labels, axis = 1)
     else:
         n_classes = len(
             np.unique(labels) # number of class n_classes = number of unique values in labels, e.g [1,1,0,2] -> n_classes = 3

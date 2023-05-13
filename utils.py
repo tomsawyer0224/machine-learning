@@ -109,15 +109,17 @@ def class_distribution(y):
     plt.hist(labels, bins = n_classes, rwidth = 0.8)
     plt.show()
 
-
-def visualize_image_data(X, y = None,
-                          class_names = None,
-                          aug = None,
-                          label_key = None,
-                          pred_probs = None,
-                          figsize = (15,18),
-                          num_images = 25,
-                          cmap = None):
+def visualize_image_data(
+    X, 
+    y = None,
+    class_names = None,
+    aug = None,
+    label_key = None,
+    pred_probs = None,
+    figsize = (15,18),
+    num_images = 25,
+    cmap = None
+):
     '''
     FUNCTIONALITIES: visualize image data from numpy array or tf dataset
     ARGUMENTS:
@@ -133,72 +135,74 @@ def visualize_image_data(X, y = None,
     RETURNS: NONE
     USAGE:
     - visualize on training data
-    visualize(train_dataset)
-    visualize(x_train, y_train, class_names = ['cat', 'dog', 'monkey']) # label_key = 'cat' for specific class visualization
+    visualize_image_data(train_dataset)
+    visualize_image_data(x_train, y_train, class_names = ['cat', 'dog', 'monkey'])
     - visualize on testing data
-    visualize(test_dataset, pred_probs = pred_probs) # label_key = 'cat' for specific class visualization
+    visualize_image_data(x_test, y_test, class_names = ['cat', 'dog', 'monkey'])
+    visualize_image_data(x_test, y_test, class_names = ['cat', 'dog', 'monkey'], pred_probs = pred_probs ,label_key = 'cats')
+    visualize_image_data(test_dataset, pred_probs = pred_probs)
+    visualize_image_data(test_dataset, pred_probs = pred_probs, label_key = 1)
     '''
-    # PRODUCE images, true_labels, class_names FROM X, y, class_names
-    # if X is numpy array -> assign simply
+    # FIGURE CONFIGURATIONS
+    if cmap == 'grey':
+        cmap = plt.cm.binary # for grey images
+    plt.figure(figsize = figsize)
+    r = math.ceil(math.sqrt(num_images))# number of images on width, height dimensions
+    
+    # VISUALIZE AUGMENTED IMAGES
+    if aug:
+        if isinstance(X, np.ndarray): # if X is numpy array
+            img = X[0]
+        else: # X is tf dataset
+            element_spec = X.element_spec
+            elem = next(iter(X.unbatch()))
+            if isinstance(element_spec, tuple): # each element is tuple (image, label)
+                img = elem[0]
+            else: # each element is image (without label)
+                img = elem
+        # plot images
+        for i in range(num_images):
+            plt.subplot(r,r,i+1)
+            plt.imshow(aug(img).numpy().astype('uint8'), cmap = cmap)
+            plt.axis('off')
+        return
+    
+    # IF INPUTS ARE NUMPY ARRAY -> CREATE TF DATASET FROM THEM
     if isinstance(X, np.ndarray):
-        images = X
-        true_labels = y
-    #if X is tf dataset
-    else:
-        # if we want to visualize prediction (on testing set), we will take all images
-        # otherwise, we will take 1 batch for simplicity
-        if class_names is None: # if we don't provide class_names -> we will get it from tf dataset
-            class_names = X.class_names # maybe raise an error (if inputs are not numpy array or tf dataset or tf dataset doesn't have labels)
-        if label_key is None and pred_probs is None: # if we don't provide label_key, pred_probs together -> visualize training data
-            ds = X.take(1).unbatch() # take 1 batch
-        else:# otherwise -> visualize prediction (on testing data)
-            ds = X.unbatch() # take all images
-        # if tf dataset spec is tuple -> it includes (images, labels)
-        # otherwise -> the tf dataset includes only images
-        if isinstance(X.element_spec, tuple):
-            # tf dataset can be shuffled when using -> use for loop, not .as_numpy_iterator()
-            images = []
-            true_labels = []
-            for img, lbl in ds:
-                images.append(img)
-                true_labels.append(lbl)
-            images = np.asarray(images)
-            true_labels = np.asarray(true_labels)
-        else:
-            images = np.array(
-                list(
-                    ds.as_numpy_iterator()
-                )
-            )
-            true_labels = None
-    # if true_labels is None -> create class_names = [None]
-    # and true_labels = [0,0,...,0] to represent label = None for all images
-    if true_labels is not None:
-        # when use tf.keras.utils.image_dataset_from_directory with label_mode = 'binary' -> labels is an array of shape (None, 1)
-        if true_labels.ndim == 2 and true_labels.shape[1] == 1: 
-            true_labels = true_labels.flatten()
-        if true_labels.ndim == 2:
-            if class_names is None:
-                class_names = np.array(range(true_labels.shape[1]))
-            true_labels = np.argmax(true_labels, axis = 1)
-        else:
-            if class_names is None:
-                class_names = np.array(
-                    range(
-                        len(np.unique(true_labels))
-                    )
-                )
-    else:
-        class_names = [None]
-        true_labels = np.array([0]*len(images))
-
-    # PRODUCE label_key, pred_labels FROM label_keys
-    if isinstance(label_key, str):
-        if label_key not in class_names:
-            print('provided "label_key" not in "class_names"!')
+        if class_names is None:
+            print('please provide "class_names"')
             return
-        label_key = class_names.index(label_key)
-    # PRODUCE pred_labels, prob_labels FROM pred_probs
+        if y is None:
+            y = np.array([-1]*len(X), dtype = 'int32')
+        X = tf.data.Dataset.from_tensor_slices((X, y)).batch(32)
+    
+    # GET CLASS NAMES
+    if class_names is None:
+        class_names = X.class_names
+    
+    # UNBATCH AND MAP THE DATASET:
+    # e.g batched dataset (images - 4D tensor, labels - 2D tensor, 1D tensor)
+    # is converted unbatched dataset (image - 3D tensor, label - 0D tensor)
+    element_spec = X.element_spec # element spec of original dataset (batched dataset)
+    if isinstance(element_spec, tuple): # element = (images, labels)
+        label_spec = element_spec[1] # label spec
+        if len(label_spec.shape) == 2: # labels in categorical or binary mode
+            if label_spec.shape[1] == 1: # binary mode
+                ds = X.unbatch().map(lambda img, lbl: (img, int(lbl[0])))                   
+            else: # categorical mode
+                ds = X.unbatch().map(
+                    lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32'))
+                )     
+            # NOTE: after unbatching, the labels in 2D form is changed to 1D form 
+        else:# labels in int mode
+            ds = X.unbatch()
+    else: # element = image -> convert to element = (images, label = -1)
+        ds = X.unbatch().map(lambda img: (img, -1))
+    # ENUMERATE FOR INDEXING PURPOSE 
+    ds = ds.enumerate()
+    
+    # EXPAND THE DATASET IF PROVIDE PREDICTED PROBABILITIES
+    # pred_probs is 2D numpy array
     if pred_probs is not None:
         if pred_probs.shape[1] == 1: # shape (None, 1) -> binary classification
             pred_probs_flattenned = pred_probs.flatten()
@@ -208,56 +212,56 @@ def visualize_image_data(X, y = None,
             # predicted label
             pred_labels = np.argmax(pred_probs, axis = 1)
             # probability of predicted label
-            prob_labels = np.max(pred_probs, axis = 1)*100
-
-    # VISUALIZE
-    plt.figure(figsize = figsize)
-    if cmap == 'grey':
-        cmap = plt.cm.binary
-    n_samples = len(images)
-    r = math.ceil(math.sqrt(num_images))# plot r images x r images on figure
-    # shuffle the images
-    shuffled_indices = np.random.permutation(n_samples)
-    idx0 = shuffled_indices[0] # use only 1 image in case of visualizing augmentation data
-    # visualize testing data
-    if label_key is not None:
-        j = 0 # images counter
-        for i in range(n_samples):
-            idx = shuffled_indices[i] # index that shuffled
-            if true_labels[idx] == label_key: # if true label is label key -> visualize it
-                j += 1
-                if j > min(num_images, n_samples): break
-                plt.subplot(r,r,j)
-                plt.xticks([])
-                plt.yticks([])
-                plt.imshow(images[idx].astype('uint8'), cmap = cmap)
-                plt.title(f'label: {class_names[true_labels[idx]]}') # show true label on top
-                if pred_probs is not None:
-                    plt.xlabel( # show predicted label on bottom
-                        f'prediction: {class_names[pred_labels[idx]]}' +
-                        ' ({:2.2f}%)'.format(prob_labels[idx])
-                    )
-        plt.show()
-        return 
-    # visualize training data
-    for i in range(min(num_images,n_samples)):
-        plt.subplot(r,r,i+1)
-        idx = shuffled_indices[i]
-        plt.xticks([])
-        plt.yticks([])
-        if aug is None:
-            plt.imshow(images[idx].astype('uint8'), cmap = cmap)
-            plt.title(f'label: {class_names[true_labels[idx]]}')
-            if pred_probs is not None:
-                plt.xlabel(
-                    f'prediction: {class_names[pred_labels[idx]]}' +
-                    ' ({:2.2f}%)'.format(prob_labels[idx])
-                )
-        else:
-            plt.imshow(aug(images[idx0]).numpy().astype('uint8'), cmap = cmap)
-            plt.title(f'label: {class_names[true_labels[idx0]]}')
-    plt.show()
+            prob_labels = 100*np.max(pred_probs, axis = 1)
+        # convert to tensor
+        pred_labels = tf.constant(pred_labels, dtype = 'int32')
+        prob_labels = tf.constant(prob_labels, dtype = 'float32')
+        
+        ds = ds.map(
+            lambda i, elem: (i, elem + (pred_labels[i], prob_labels[i]))
+        )
+    else:
+        ds = ds.take(num_images)
     
+    # GET LABEL KEY IF PROVIDED
+    if isinstance(label_key, str):
+        if label_key not in class_names:
+            print('provided "label_key" not in "class_names"!')
+            return
+        label_key = class_names.index(label_key)
+    
+    # FILTER THE DATASET IF LABEL KEY IS PROVIDED
+    if label_key is not None:
+        ds = ds.filter(lambda i, elem: tf.math.equal(elem[1], label_key))
+    ds = ds.map(lambda i, elem: elem)
+    
+    # COUNT NUMBER OF SAMPLES IN THE DATASET
+    n_samples = 0
+    for _ in ds:
+        n_samples += 1
+    # EXTEND CLASS NAME (THE LAST ELEMENT IS '?') FOR VISUALIZING UNKNOW LABELS
+    class_names_extended = class_names + ['?']
+
+    shuffled_indices = np.random.permutation(n_samples) # shuffle the indices
+    idx = shuffled_indices[:num_images] # get 'num_images' images from the dataset
+    j = 0 # image counter
+    for i, elem in enumerate(ds):
+        if i in idx:
+            j += 1
+            if j > num_images: return
+            img = elem[0]
+            lbl = elem[1]
+
+            plt.subplot(r,r,j)
+            plt.xticks([])
+            plt.yticks([])
+            plt.imshow(img.numpy().astype('uint8'), cmap = cmap)
+            plt.title(f'label: {class_names_extended[lbl]}')
+            if pred_probs is not None:
+                pred = elem[2]
+                prob = elem[3]
+                plt.xlabel(f'prediction: {class_names_extended[pred]} ({prob:2.2f}%)')
+    return
 
 def prediction_result(X, y = None,
                       class_names = None,
@@ -306,47 +310,48 @@ def prediction_result(X, y = None,
         prob_labels = np.max(pred_probs, axis = 1)
     # ------------------------------------------------
     
-    # PRODUCE images, true_labels, class_names FROM X, y, class_names
-    # we will create a new variable image_id (index of image if X is numpy array or file name of image if X is dataset)
+    # CREATE TF DATASET FROM NUMPY ARRAY (IF INPUTS IS NUMPY ARRAY)
     if isinstance(X, np.ndarray):
-        images = X
-        true_labels = y
-        image_id = range(len(images))
+        if y is None or class_names is None:
+            print("please provide 'y' and 'class_names'")
+            return
+        n_samples = len(X)
+        image_ids = range(n_samples)
+        X = tf.data.Dataset.from_tensor_slices((X, y)).batch(32)
     else:
-        if class_names is None:
-            class_names = X.class_names
-        images = []
-        true_labels = []
-        for img, lbl in X.unbatch():
-            images.append(img)
-            true_labels.append(lbl)
-        images = np.asarray(images)
-        true_labels = np.asarray(true_labels)
-        image_id = filenames
-    #-----------------------------------------------------------------
-    # we must provid true_labels
-    if true_labels is None:
-        print('please provide labels!')
-        return
+        n_samples = len(filenames)
+        image_ids = filenames
+    if class_names is None:
+        class_names = X.class_names
     
-    # if true_labels is 2D -> use argmax to transform it into 1D array
-    # if we don't provide class_names -> use class id instead
-    if true_labels.ndim == 2:
-        if class_names is None:
-            class_names = list(range(true_labels.shape[1]))
-        true_labels = np.argmax(true_labels, axis = 1)
-    else:
-        if class_names is None:
-            class_names = list(
-                range(len(np.unique(true_labels)))
-            )
+    element_spec = X.element_spec # element spec of original dataset (batched dataset)
+    label_spec = element_spec[1] # label spec
+    if len(label_spec.shape) == 2: # labels in categorical or binary mode
+        if label_spec.shape[1] == 1: # binary mode
+            ds = X.unbatch().map(lambda img, lbl: (img, int(lbl[0])))                   
+        else: # categorical mode
+            ds = X.unbatch().map(
+                lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32'))
+            )     
+        # NOTE: after unbatching, the labels in 2D form is changed to 1D form 
+    else:# labels in int mode
+        ds = X.unbatch()
+    # GET TRUE LABELS FROM THE DATASET
+    true_labels = np.array(
+        list(
+            ds.map(lambda img, lbl: lbl).as_numpy_iterator()
+        )
+    )
+    # right prediction -> True, wrong prediction -> False
+    correct = true_labels == pred_labels 
+    # true class names of image i
+    true_class_names = [class_names[true_labels[i]] for i in range(len(true_labels))] 
+    # predicted class names of image i
+    pred_class_names = [class_names[pred_labels[i]] for i in range(len(pred_labels))] 
     
-    correct = true_labels == pred_labels # right prediction -> True, wrong prediction -> False
-    true_class_names = [class_names[true_labels[i]] for i in range(len(true_labels))] # true class names of image i
-    pred_class_names = [class_names[pred_labels[i]] for i in range(len(pred_labels))] # predicted class names of image i
     # PRODUCE A pandas DataFrame
     all_pred_result = pd.DataFrame({
-        'image_id': image_id,
+        'image_id': image_ids,
         'true_label': true_labels,
         'true_class_name': true_class_names,
         'pred_label': pred_labels,
@@ -354,30 +359,33 @@ def prediction_result(X, y = None,
         'pred_proba': prob_labels,
         'correct': correct
     })
+    # PLOT TOP WRONG PREDICTIONS
     # filter wrong result, and sort it (decreasing)
     wrong_pred_result = all_pred_result[all_pred_result['correct'] == False].sort_values(by = 'pred_proba', ascending = False)
     # original indices of images
     org_indices = np.array(wrong_pred_result.index)
     # indices of top wrong predictions
     top_wrong_indices = org_indices[:min(25, len(org_indices))]
-    # plotting
     n = len(top_wrong_indices)
+    # FIGURE CONFIGURATION
     r = math.ceil(math.sqrt(n)) # r image x r image of figure
     plt.figure(figsize = figsize)
     if cmap == 'grey': # cmap = 'grey' or plt.cm.binary for grey plotting
         cmap = plt.cm.binary
-    for i in range(n):
-        idx = top_wrong_indices[i]
-        plt.subplot(r,r,i+1)
-        plt.imshow(images[idx].astype('uint8'), cmap = cmap)
-        plt.title(f'label: {class_names[true_labels[idx]]}') # true label
-        plt.xticks([])
-        plt.yticks([])
-        plt.xlabel( # predicted label
-            f'prediction: {class_names[pred_labels[idx]]}' +
-            ' ({:2.2f}%)'.format(100*prob_labels[idx])
-        )
-    plt.show()
+    j = 0 # image counter
+    for i, (img, lbl) in enumerate(ds):
+        if i in top_wrong_indices:
+            j += 1
+            #if j > 25: return
+            plt.subplot(r,r,j)
+            plt.xticks([])
+            plt.yticks([])
+            plt.imshow(img.numpy().astype('uint8'), cmap = cmap)
+            plt.title(f'label: {class_names[lbl]}')
+            plt.xlabel( # predicted label
+                f'prediction: {class_names[pred_labels[i]]}' +
+                ' ({:2.2f}%)'.format(100*prob_labels[i])
+            )
     # return all prediction or wrong prediction only
     if return_wrong_pred_only == True:
         return wrong_pred_result

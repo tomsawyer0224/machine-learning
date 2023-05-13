@@ -332,7 +332,8 @@ def prediction_result(X, y = None,
     label_spec = element_spec[1] # label spec
     if len(label_spec.shape) == 2: # labels in categorical or binary mode
         if label_spec.shape[1] == 1: # binary mode
-            ds = X.unbatch().map(lambda img, lbl: (img, int(lbl[0])))                   
+            #ds = X.unbatch().map(lambda img, lbl: (img, int(lbl[0])))       
+            ds = X.unbatch().map(lambda img, lbl: (img, tf.cast(lbl[0], dtype = tf.int32)))
         else: # categorical mode
             ds = X.unbatch().map(
                 lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32'))

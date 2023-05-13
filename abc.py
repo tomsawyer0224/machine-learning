@@ -175,3 +175,284 @@ def plot_confusion_matrix(y_true,
                   horizontalalignment="center",
                   color="white" if cm[i, j] > threshold else "black",
                   size=text_size)
+def visualize_image_data(
+    X, 
+    y = None,
+    class_names = None,
+    aug = None,
+    label_key = None,
+    pred_probs = None,
+    figsize = (15,18),
+    num_images = 25,
+    cmap = None
+):
+    '''
+    FUNCTIONALITIES: visualize image data from numpy array or tf dataset
+    ARGUMENTS:
+    - X: images data -> numpy array or tf dataset
+    - y: labels -> nump array or None (if X is a tf dataset)
+    - class_names: name of classes -> list of string (e.g [0,1,2] or ['cat', 'dog', 'monkey']) or None
+    - aug: data augmentation -> keras Sequential or None
+    - label_key: visualize a specific class -> int, string or None 
+    - pred_probs: prediction probabilities -> numpy array in one hot encoding form
+    - figsize: figure size -> tuple of int
+    - num_images: number of images in figure -> int
+    - cmap: color map -> plt.cm.binary (to visualize grey image) or None (color image) or 'grey'
+    RETURNS: NONE
+    USAGE:
+    - visualize on training data
+    visualize_image_data(train_dataset)
+    visualize_image_data(x_train, y_train, class_names = ['cat', 'dog', 'monkey'])
+    - visualize on testing data
+    visualize_image_data(x_test, y_test, class_names = ['cat', 'dog', 'monkey'])
+    visualize_image_data(x_test, y_test, class_names = ['cat', 'dog', 'monkey'], pred_probs = pred_probs ,label_key = 'cats')
+    visualize_image_data(test_dataset, pred_probs = pred_probs)
+    visualize_image_data(test_dataset, pred_probs = pred_probs, label_key = 1)
+    '''
+    # FIGURE CONFIGURATIONS
+    if cmap == 'grey':
+        cmap = plt.cm.binary # for grey images
+    plt.figure(figsize = figsize)
+    r = math.ceil(math.sqrt(num_images))# number of images on width, height dimensions
+    
+    # VISUALIZE AUGMENTED IMAGES
+    if aug:
+        if isinstance(X, np.ndarray): # if X is numpy array
+            img = X[0]
+        else: # X is tf dataset
+            element_spec = X.element_spec
+            elem = next(iter(X.unbatch()))
+            if isinstance(element_spec, tuple): # each element is tuple (image, label)
+                img = elem[0]
+            else: # each element is image (without label)
+                img = elem
+        # plot images
+        for i in range(num_images):
+            plt.subplot(r,r,i+1)
+            plt.imshow(aug(img).numpy().astype('uint8'), cmap = cmap)
+            plt.axis('off')
+        return
+    
+    # IF INPUTS ARE NUMPY ARRAY -> CREATE TF DATASET FROM THEM
+    if isinstance(X, np.ndarray):
+        if class_names is None:
+            print('please provide "class_names"')
+            return
+        if y is None:
+            y = np.array([-1]*len(X), dtype = 'int32')
+        X = tf.data.Dataset.from_tensor_slices((X, y)).batch(32)
+    
+    # GET CLASS NAMES
+    if class_names is None:
+        class_names = X.class_names
+    
+    # UNBATCH AND MAP THE DATASET:
+    # e.g batched dataset (images - 4D tensor, labels - 2D tensor, 1D tensor)
+    # is converted unbatched dataset (image - 3D tensor, label - 0D tensor)
+    element_spec = X.element_spec # element spec of original dataset (batched dataset)
+    if isinstance(element_spec, tuple): # element = (images, labels)
+        label_spec = element_spec[1] # label spec
+        if len(label_spec.shape) == 2: # labels in categorical or binary mode
+            if label_spec.shape[1] == 1: # binary mode
+                ds = X.unbatch().map(lambda img, lbl: (img, int(lbl[0])))                   
+            else: # categorical mode
+                ds = X.unbatch().map(
+                    lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32'))
+                )     
+            # NOTE: after unbatching, the labels in 2D form is changed to 1D form 
+        else:# labels in int mode
+            ds = X.unbatch()
+    else: # element = image -> convert to element = (images, label = -1)
+        ds = X.unbatch().map(lambda img: (img, -1))
+    # ENUMERATE FOR INDEXING PURPOSE 
+    ds = ds.enumerate()
+    
+    # EXPAND THE DATASET IF PROVIDE PREDICTED PROBABILITIES
+    # pred_probs is 2D numpy array
+    if pred_probs is not None:
+        if pred_probs.shape[1] == 1: # shape (None, 1) -> binary classification
+            pred_probs_flattenned = pred_probs.flatten()
+            pred_labels = np.where(pred_probs_flattenned > 0.5, 1, 0)
+            prob_labels = 100*np.where(pred_probs_flattenned > 0.5, pred_probs_flattenned, 1 - pred_probs_flattenned)
+        else:
+            # predicted label
+            pred_labels = np.argmax(pred_probs, axis = 1)
+            # probability of predicted label
+            prob_labels = 100*np.max(pred_probs, axis = 1)
+        # convert to tensor
+        pred_labels = tf.constant(pred_labels, dtype = 'int32')
+        prob_labels = tf.constant(prob_labels, dtype = 'float32')
+        
+        ds = ds.map(
+            lambda i, elem: (i, elem + (pred_labels[i], prob_labels[i]))
+        )
+    else:
+        ds = ds.take(num_images)
+    
+    # GET LABEL KEY IF PROVIDED
+    if isinstance(label_key, str):
+        if label_key not in class_names:
+            print('provided "label_key" not in "class_names"!')
+            return
+        label_key = class_names.index(label_key)
+    
+    # FILTER THE DATASET IF LABEL KEY IS PROVIDED
+    if label_key is not None:
+        ds = ds.filter(lambda i, elem: tf.math.equal(elem[1], label_key))
+    ds = ds.map(lambda i, elem: elem)
+    
+    # COUNT NUMBER OF SAMPLES IN THE DATASET
+    n_samples = 0
+    for _ in ds:
+        n_samples += 1
+    # EXTEND CLASS NAME (THE LAST ELEMENT IS '?') FOR VISUALIZING UNKNOW LABELS
+    class_names_extended = class_names + ['?']
+
+    shuffled_indices = np.random.permutation(n_samples) # shuffle the indices
+    idx = shuffled_indices[:num_images] # get 'num_images' images from the dataset
+    j = 0 # image counter
+    for i, elem in enumerate(ds):
+        if i in idx:
+            j += 1
+            if j > num_images: return
+            img = elem[0]
+            lbl = elem[1]
+
+            plt.subplot(r,r,j)
+            plt.xticks([])
+            plt.yticks([])
+            plt.imshow(img.numpy().astype('uint8'), cmap = cmap)
+            plt.title(f'label: {class_names_extended[lbl]}')
+            if pred_probs is not None:
+                pred = elem[2]
+                prob = elem[3]
+                plt.xlabel(f'prediction: {class_names_extended[pred]} ({prob:2.2f}%)')
+    return
+
+def prediction_result(X, y = None,
+                      class_names = None,
+                      filenames = None,
+                      pred_probs = None,
+                      return_wrong_pred_only = True,
+                      figsize = (15,18),
+                      cmap = None):
+    '''
+    FUNCTIONALITIES: 
+    - creat a pandas DataFrame to describe prediction result
+    - plot top wrong predictions
+    ARGUMENTS:      
+    - X: images -> numpy array or tf dataset without shuffle
+    - y: lables -> numpy array (1D or 2D) or None (if X is tf dataset)
+    - class_names: name of classes -> list
+    - filenames: None (if X is numpy array) or list of file names (if X is dataset)
+        Note: file name must correspond to (image, label) in ds
+    - pred_probs: prediction probabilities -> 2D numpy array
+    - return_wrong_pred: return only wrong predictions (True) or return all predictions (False) -> boolean
+    ------2 args below for plotting purpose
+    - figsize: figure size -> tuple of int
+    - cmap: color map -> plt.cm.binary or None or 'grey'
+        
+    RETURN: a pandas DataFrame
+    USAGE:
+    - numpy array: 
+        pred_result = prediction_result(X=X_test, y=y_test, class_names=class_names, pred_probs=test_pred_probs)
+        if we don't provide class_names -> class_names = class id
+    - tf dataset: 
+        pred_result = prediction_result(X=test_dataset, pred_probs=test_pred_probs, filenames=list_file_names_in_test_dir)
+    '''
+    # PRODUCE pred_labels, prob_labels FROM pred_probs
+    if pred_probs is None:
+        print('please provide "pred_probs"!')
+        return
+    
+    if pred_probs.shape[1] == 1: # (None, 1) -> binary classification
+        pred_probs_flattended = pred_probs.flatten()
+        pred_labels = np.where(pred_probs_flattended > 0.5, 1, 0)
+        prob_labels = np.where(pred_probs_flattended > 0.5, pred_probs_flattended, 1 - pred_probs_flattended)
+    else: # categorical classification
+        # predicted label
+        pred_labels = np.argmax(pred_probs, axis = 1)
+        # probability of prediction
+        prob_labels = np.max(pred_probs, axis = 1)
+    # ------------------------------------------------
+    
+    # CREATE TF DATASET FROM NUMPY ARRAY (IF INPUTS IS NUMPY ARRAY)
+    if isinstance(X, np.ndarray):
+        if y is None or class_names is None:
+            print("please provide 'y' and 'class_names'")
+            return
+        n_samples = len(X)
+        image_ids = range(n_samples)
+        X = tf.data.Dataset.from_tensor_slices((X, y)).batch(32)
+    else:
+        n_samples = len(filenames)
+        image_ids = filenames
+    if class_names is None:
+        class_names = X.class_names
+    
+    element_spec = X.element_spec # element spec of original dataset (batched dataset)
+    label_spec = element_spec[1] # label spec
+    if len(label_spec.shape) == 2: # labels in categorical or binary mode
+        if label_spec.shape[1] == 1: # binary mode
+            ds = X.unbatch().map(lambda img, lbl: (img, int(lbl[0])))                   
+        else: # categorical mode
+            ds = X.unbatch().map(
+                lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32'))
+            )     
+        # NOTE: after unbatching, the labels in 2D form is changed to 1D form 
+    else:# labels in int mode
+        ds = X.unbatch()
+    # GET TRUE LABELS FROM THE DATASET
+    true_labels = np.array(
+        list(
+            ds.map(lambda img, lbl: lbl).as_numpy_iterator()
+        )
+    )
+    # right prediction -> True, wrong prediction -> False
+    correct = true_labels == pred_labels 
+    # true class names of image i
+    true_class_names = [class_names[true_labels[i]] for i in range(len(true_labels))] 
+    # predicted class names of image i
+    pred_class_names = [class_names[pred_labels[i]] for i in range(len(pred_labels))] 
+    
+    # PRODUCE A pandas DataFrame
+    all_pred_result = pd.DataFrame({
+        'image_id': image_ids,
+        'true_label': true_labels,
+        'true_class_name': true_class_names,
+        'pred_label': pred_labels,
+        'pred_class_name': pred_class_names,
+        'pred_proba': prob_labels,
+        'correct': correct
+    })
+    # PLOT TOP WRONG PREDICTIONS
+    # filter wrong result, and sort it (decreasing)
+    wrong_pred_result = all_pred_result[all_pred_result['correct'] == False].sort_values(by = 'pred_proba', ascending = False)
+    # original indices of images
+    org_indices = np.array(wrong_pred_result.index)
+    # indices of top wrong predictions
+    top_wrong_indices = org_indices[:min(25, len(org_indices))]
+    n = len(top_wrong_indices)
+    # FIGURE CONFIGURATION
+    r = math.ceil(math.sqrt(n)) # r image x r image of figure
+    plt.figure(figsize = figsize)
+    if cmap == 'grey': # cmap = 'grey' or plt.cm.binary for grey plotting
+        cmap = plt.cm.binary
+    j = 0 # image counter
+    for i, (img, lbl) in enumerate(ds):
+        if i in top_wrong_indices:
+            j += 1
+            #if j > 25: return
+            plt.subplot(r,r,j)
+            plt.xticks([])
+            plt.yticks([])
+            plt.imshow(img.numpy().astype('uint8'), cmap = cmap)
+            plt.title(f'label: {class_names[lbl]}')
+            plt.xlabel( # predicted label
+                f'prediction: {class_names[pred_labels[i]]}' +
+                ' ({:2.2f}%)'.format(100*prob_labels[i])
+            )
+    # return all prediction or wrong prediction only
+    if return_wrong_pred_only == True:
+        return wrong_pred_result
+    return all_pred_result

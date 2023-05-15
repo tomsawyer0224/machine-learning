@@ -523,7 +523,7 @@ def plot_confusion_matrix(y_true,
                         len(true_labels.shape[1])
                     )
                 )
-            true_labels = np.argmax(true_lables, axis = 1)
+            true_labels = np.argmax(true_labels, axis = 1)
     else:
         if class_names is None:
             class_names = list(

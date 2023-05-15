@@ -504,7 +504,8 @@ def plot_confusion_matrix(y_true,
     if isinstance(y_true, np.ndarray):
         true_labels = y_true
     else:
-        class_names = y_true.class_names
+        if class_names is None:
+            class_names = y_true.class_names
         true_labels = np.array(
             list(
                 y_true.unbatch().map(lambda img, lbl: lbl, num_parallel_calls = tf.data.AUTOTUNE).as_numpy_iterator()

@@ -94,7 +94,7 @@ def class_distribution(y):
         # create a numpy array from a list of labels (numpy arrays)
         labels = np.array(
             list(
-                y.unbatch().map(lambda img, lbl: lbl).as_numpy_iterator() # return a list of labels (numpy form)
+                y.unbatch().map(lambda img, lbl: lbl, num_parallel_calls = tf.data.AUTOTUNE).as_numpy_iterator() # return a list of labels (numpy form)
             )
         )
     # if labels is in 2D one hot encoding form -> use argmax to get labels in 1D form (like [0,3,2,1,2,3])
@@ -192,16 +192,16 @@ def visualize_image_data(
         if len(label_spec.shape) == 2: # labels in categorical or binary mode
             if label_spec.shape[1] == 1: # binary mode
                 #ds = X.unbatch().map(lambda img, lbl: (img, int(lbl[0])))    
-                ds = X.unbatch().map(lambda img, lbl: (img, tf.cast(lbl[0], dtype = tf.int32)))
+                ds = X.unbatch().map(lambda img, lbl: (img, tf.cast(lbl[0], dtype = tf.int32)), num_parallel_calls = tf.data.AUTOTUNE)
             else: # categorical mode
                 ds = X.unbatch().map(
-                    lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32'))
+                    lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32')), num_parallel_calls = tf.data.AUTOTUNE
                 )     
             # NOTE: after unbatching, the labels in 2D form is changed to 1D form 
         else:# labels in int mode
             ds = X.unbatch()
     else: # element = image -> convert to element = (images, label = -1)
-        ds = X.unbatch().map(lambda img: (img, -1))
+        ds = X.unbatch().map(lambda img: (img, -1), num_parallel_calls = tf.data.AUTOTUNE)
     # ENUMERATE FOR INDEXING PURPOSE 
     ds = ds.enumerate()
     
@@ -222,7 +222,7 @@ def visualize_image_data(
         prob_labels = tf.constant(prob_labels, dtype = 'float32')
         
         ds = ds.map(
-            lambda i, elem: (i, elem + (pred_labels[i], prob_labels[i]))
+            lambda i, elem: (i, elem + (pred_labels[i], prob_labels[i])), num_parallel_calls = tf.data.AUTOTUNE
         )
     else:
         ds = ds.take(num_images)
@@ -237,7 +237,7 @@ def visualize_image_data(
     # FILTER THE DATASET IF LABEL KEY IS PROVIDED
     if label_key is not None:
         ds = ds.filter(lambda i, elem: tf.math.equal(elem[1], label_key))
-    ds = ds.map(lambda i, elem: elem)
+    ds = ds.map(lambda i, elem: elem, num_parallel_calls = tf.data.AUTOTUNE)
     
     # COUNT NUMBER OF SAMPLES IN THE DATASET
     n_samples = 0
@@ -333,10 +333,10 @@ def prediction_result(X, y = None,
     if len(label_spec.shape) == 2: # labels in categorical or binary mode
         if label_spec.shape[1] == 1: # binary mode
             #ds = X.unbatch().map(lambda img, lbl: (img, int(lbl[0])))       
-            ds = X.unbatch().map(lambda img, lbl: (img, tf.cast(lbl[0], dtype = tf.int32)))
+            ds = X.unbatch().map(lambda img, lbl: (img, tf.cast(lbl[0], dtype = tf.int32)), num_parallel_calls = tf.data.AUTOTUNE)
         else: # categorical mode
             ds = X.unbatch().map(
-                lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32'))
+                lambda img, lbl: (img, tf.math.argmax(lbl, output_type = 'int32')), num_parallel_calls = tf.data.AUTOTUNE
             )     
         # NOTE: after unbatching, the labels in 2D form is changed to 1D form 
     else:# labels in int mode
@@ -344,7 +344,7 @@ def prediction_result(X, y = None,
     # GET TRUE LABELS FROM THE DATASET
     true_labels = np.array(
         list(
-            ds.map(lambda img, lbl: lbl).as_numpy_iterator()
+            ds.map(lambda img, lbl: lbl, num_parallel_calls = tf.data.AUTOTUNE).as_numpy_iterator()
         )
     )
     # right prediction -> True, wrong prediction -> False
@@ -416,7 +416,7 @@ def f1_score(y_true, pred_probs, class_names=None, figsize=(8,15)):
         class_names = y_true.class_names
         true_labels = np.array(
             list(
-                y_true.unbatch().map(lambda img, lbl: lbl).as_numpy_iterator()
+                y_true.unbatch().map(lambda img, lbl: lbl, num_parallel_calls = tf.data.AUTOTUNE).as_numpy_iterator()
             )
         )
     # if true_labels is 2D -> convert to 1D, else do nothing
@@ -507,7 +507,7 @@ def plot_confusion_matrix(y_true,
         class_names = y_true.class_names
         true_labels = np.array(
             list(
-                y_true.unbatch().map(lambda img, lbl: lbl).as_numpy_iterator()
+                y_true.unbatch().map(lambda img, lbl: lbl, num_parallel_calls = tf.data.AUTOTUNE).as_numpy_iterator()
             )
         )
     if true_labels.ndim == 2:
